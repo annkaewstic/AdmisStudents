@@ -1,94 +1,190 @@
 import pandas as pd
 import plotly.express as px
-
+from urllib.parse import quote
 from dash import Dash, dcc, html
-from dash.dependencies import Input, Output
+from dash import dash_table
 
-# Цветовая тема: оттенки оранжевого и жёлтого
+# Цветовая тема
 THEME = {
     'background': '#fff7e6',
-    'primary': '#e67e22',  # насыщенный оранжевый
-    'secondary': '#f39c12',  # тёмно-жёлтый
-    'accent1': '#f1c40f',  # ярко-жёлтый
-    'accent2': '#f8c471',  # светло-оранжевый
-    'text': '#5d4037'  # тёмно-коричневый для текста
+    'primary': '#e67e22',
+    'secondary': '#f39c12',
+    'accent1': '#f1c40f',
+    'accent2': '#f8c471',
+    'text': '#5d4037'
 }
 
-# Ссылка на raw-CSV из ветки release
-CSV_URL = (
-    "https://raw.githubusercontent.com/"
-    "annkaewstic/AdmisStudents/release/"
-    "Список%20студентов%20для%20расчета%20контингента%20на%2006.2025.csv"
+BASE_RAW = "https://raw.githubusercontent.com/annkaewstic/AdmisStudents/release/"
+CSV_NAME = "Список студентов для расчета контингента на 06.2025.csv"
+CSV_URL = BASE_RAW + quote(CSV_NAME)
+
+PDF_FILES = [
+    "Количество зачисленных на обучение в 2024 году. Очная.pdf",
+    "Количество зачисленных на обучение в 2024 году. Очно-заочная.pdf",
+    "Количество зачисленных на обучение в 2024 году. заочная.pdf"
+]
+PDF_LINKS = [(name, BASE_RAW + quote(name)) for name in PDF_FILES]
+
+# Загрузка данных
+df = pd.read_csv(CSV_URL, sep=';', encoding='cp1251')
+df.columns = [c.strip() for c in df.columns]
+total_students = len(df)
+
+# Treemap: квадратный, крупный шрифт с переносом
+treemap_fig = px.treemap(
+    df,
+    path=['Факультет', 'Кафедра'],
+    color='Факультет',
+    color_discrete_sequence=[
+        THEME['primary'], THEME['secondary'],
+        THEME['accent1'], THEME['accent2']
+    ],
+    title="Структура контингента: факультеты и кафедры"
+)
+treemap_fig.update_traces(
+    branchvalues="total",
+    textinfo="label+value",
+    textfont=dict(size=18),
+    tiling=dict(pad=5)
+)
+treemap_fig.update_layout(
+    width=900, height=900,
+    margin=dict(t=50, l=30, r=30, b=30),
+    paper_bgcolor=THEME['background'],
+    plot_bgcolor=THEME['background']
 )
 
-app = Dash(__name__, suppress_callback_exceptions=True)
+# Stacked bar
+bar_fig = px.bar(
+    df.groupby(['Факультет','Кафедра']).size().reset_index(name='Students'),
+    x='Факультет', y='Students', color='Кафедра', barmode='stack',
+    color_discrete_sequence=[
+        THEME['accent1'], THEME['accent2'],
+        THEME['primary'], THEME['secondary']
+    ],
+    title="Количество студентов по факультетам и кафедрам"
+)
+bar_fig.update_layout(
+    paper_bgcolor=THEME['background'],
+    plot_bgcolor=THEME['background']
+)
+
+# Pie chart
+status_df = (
+    df['Статус']
+      .value_counts()
+      .rename_axis('Status')
+      .reset_index(name='Count')
+)
+
+pie_fig = px.pie(
+    status_df,
+    names='Status',
+    values='Count',
+    color='Status',  # без этого sequence не сработает
+    color_discrete_sequence=[THEME['primary'], THEME['accent1']],
+    title="Процент студентов: обучающихся и в академическом отпуске",
+    template=None      # чтобы не подмешивалась тема plotly по умолчанию
+)
+pie_fig.update_layout(
+    paper_bgcolor=THEME['background'],
+    plot_bgcolor=THEME['background']
+)
+
+app = Dash(__name__)
+
+# Встраиваем CSS в шаблон
+app.index_string = f'''
+<!DOCTYPE html>
+<html>
+  <head>
+    {{%metas%}}
+    <title>{{%title%}}</title>
+    {{%favicon%}}
+    {{%css%}}
+    <style>
+      body {{ background: {THEME['background']}; }}
+      .pdf-link {{
+        display: block;
+        font-size: 24px;
+        color: {THEME['secondary']};
+        margin-bottom: 16px;
+        text-decoration: none;
+      }}
+      .pdf-link:hover {{
+        text-decoration: underline;
+      }}
+      .dash-graph {{
+        margin: 40px auto !important;
+      }}
+      .data-table-cell {{
+        white-space: normal !important;
+        height: auto !important;
+        font-size: 16px;
+        padding: 8px;
+      }}
+    </style>
+  </head>
+  <body>
+    {{%app_entry%}}
+    <footer>
+      {{%config%}}
+      {{%scripts%}}
+      {{%renderer%}}
+    </footer>
+  </body>
+</html>
+'''
 
 app.layout = html.Div(
-    style={'backgroundColor': THEME['background'], 'minHeight': '100vh', 'padding': '20px'},
+    style={'padding': '20px', 'backgroundColor': THEME['background']},
     children=[
-        html.H1("Admission Dashboard", style={'textAlign': 'center', 'color': THEME['primary']}),
-        html.P("Нажать для показа анализа контингента студентов 2025 года",
-               style={'textAlign': 'center', 'color': THEME['text'], 'fontStyle': 'italic'}),
-        html.Div(html.Button("Показать анализ", id="show-analysis", n_clicks=0,
-                             style={'backgroundColor': THEME['secondary'], 'color': 'white',
-                                    'padding': '10px 20px', 'border': 'none', 'borderRadius': '5px',
-                                    'fontSize': '18px', 'cursor': 'pointer'}), style={'textAlign': 'center'}),
-        html.Div(id="dashboard-content", style={'marginTop': '40px'})
+
+        html.H1(
+            "Admission Dashboard",
+            style={
+                'textAlign': 'center',
+                'color': THEME['primary'],
+                'fontSize': '48px',
+                'marginBottom': '10px'
+            }
+        ),
+
+        html.P(
+            "Контингент студентов за июнь 2025",
+            style={
+                'textAlign': 'center',
+                'color': THEME['text'],
+                'fontStyle': 'italic',
+                'fontSize': '24px',
+                'marginBottom': '40px'
+            }
+        ),
+
+        html.Div(style={'height': '80px'}),
+
+        html.Div([
+            html.A(name, href=url, target="_blank", className='pdf-link')
+            for name, url in PDF_LINKS
+        ], style={'maxWidth': '800px', 'margin': 'auto', 'marginBottom': '60px'}),
+
+        html.Div(dcc.Graph(figure=treemap_fig), style={'display': 'flex', 'justifyContent': 'center'}),
+
+        html.Div(dcc.Graph(figure=bar_fig), className='dash-graph'),
+
+        html.Div(dcc.Graph(figure=pie_fig), className='dash-graph'),
+
+        html.P(
+            f"Всего студентов в 2025 году: {total_students}",
+            style={
+                'textAlign': 'center',
+                'color': THEME['text'],
+                'fontWeight': 'bold',
+                'marginTop': '40px'
+            }
+        )
     ]
 )
 
-@app.callback(
-    Output("dashboard-content", "children"),
-    Input("show-analysis", "n_clicks")
-)
-def render_dashboard(n):
-    if not n:
-        return html.P("Ожидание запуска...", style={'textAlign': 'center', 'color': THEME['text']})
-
-    # Загрузка данных
-    df = pd.read_csv(CSV_URL)
-    # Переименовать столбцы в английские, если нужно
-    df.columns = [c.strip() for c in df.columns]
-
-    # Первый график: иерархия факультетов и кафедр
-    sunburst = px.sunburst(
-        df, path=['Faculty', 'Department'], values=None,
-        color='Faculty', color_discrete_sequence=[
-            THEME['primary'], THEME['secondary'], THEME['accent1'], THEME['accent2']
-        ],
-        title="Структура контингента: факультеты и кафедры"
-    )
-    sunburst.update_traces(branchvalues="total")
-
-    # Второй график: столбчатая диаграмма с факультетами и кафедрами
-    counts = df.groupby(['Faculty', 'Department']).size().reset_index(name='Students')
-    bar = px.bar(
-        counts, x='Faculty', y='Students', color='Department', barmode='stack',
-        color_discrete_sequence=[
-            THEME['accent1'], THEME['accent2'], THEME['primary'], THEME['secondary']
-        ],
-        title="Количество студентов по факультетам и кафедрам"
-    )
-
-    # Третий график: процент обучающихся и в академическом отпуске
-    status_counts = df['Status'].value_counts().reset_index()
-    status_counts.columns = ['Status', 'Count']
-    pie = px.pie(
-        status_counts, names='Status', values='Count',
-        color='Status',
-        color_discrete_map={
-            'Active': THEME['primary'],
-            'On Leave': THEME['secondary']
-        },
-        title="Процент студентов: обучающихся и в академическом отпуске"
-    )
-
-    return html.Div([
-        dcc.Graph(figure=sunburst),
-        dcc.Graph(figure=bar),
-        dcc.Graph(figure=pie)
-    ], style={'maxWidth': '1200px', 'margin': 'auto'})
-
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     app.run(debug=True)
