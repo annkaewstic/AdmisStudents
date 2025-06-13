@@ -4,7 +4,7 @@ from urllib.parse import quote
 from dash import Dash, dcc, html
 from dash import dash_table
 
-# Цветовая тема
+# цветовая тема
 THEME = {
     'background': '#fff7e6',
     'primary': '#e67e22',
@@ -30,7 +30,6 @@ df = pd.read_csv(CSV_URL, sep=';', encoding='cp1251')
 df.columns = [c.strip() for c in df.columns]
 total_students = len(df)
 
-# Treemap: квадратный, крупный шрифт с переносом
 treemap_fig = px.treemap(
     df,
     path=['Факультет', 'Кафедра'],
@@ -93,7 +92,7 @@ pie_fig.update_layout(
 
 app = Dash(__name__)
 
-# Встраиваем CSS в шаблон
+#  CSS встроенный
 app.index_string = f'''
 <!DOCTYPE html>
 <html>
