@@ -16,6 +16,7 @@ THEME = {
 
 BASE_RAW = "https://raw.githubusercontent.com/annkaewstic/AdmisStudents/release/"
 CSV_URL = BASE_RAW + quote("Список студентов для расчета контингента на 06.2025.csv")
+APPL_URL = BASE_RAW + quote("2024 год.csv")
 
 PDF_FILES = [
     "Количество зачисленных на обучение в 2024 году. Очная.pdf",
@@ -26,6 +27,7 @@ PDF_LINKS = [(name, BASE_RAW + quote(name)) for name in PDF_FILES]
 
 # загрузка и подготовка данных
 df = pd.read_csv(CSV_URL, sep=';', encoding='cp1251')
+apps = pd.read_csv(APPL_URL, sep=',', encoding='utf-8')
 df.columns = [c.strip() for c in df.columns]
 total_students = len(df)
 # аббревиатуры и полные названия
@@ -33,6 +35,104 @@ df['Fac_abbr']  = df['Факультет'].str.extract(r'\((.*?)\)')
 df['Dept_abbr'] = df['Кафедра'].str.extract(r'\((.*?)\)')
 fac_full = df.dropna(subset=['Fac_abbr']).drop_duplicates('Fac_abbr').set_index('Fac_abbr')['Факультет'].to_dict()
 dept_full = df.dropna(subset=['Dept_abbr']).drop_duplicates('Dept_abbr').set_index('Dept_abbr')['Кафедра'].to_dict()
+
+# --- 1) три графика «заявлений» ---
+# 1.1 По направлениям — собираем списки
+dir_series = apps['Направление'].value_counts()
+dir_df = dir_series.reset_index()
+dir_df.columns = ['Направление', 'Count']
+total_dir  = dir_df['Count'].sum()
+# группируем по Count и склеиваем направления через <br>
+grouped = (
+    dir_df
+    .groupby('Count')['Направление']
+    .agg(lambda names: '<br>'.join(names))
+    .reset_index(name='HoverList')
+)
+fig_apps_dir = px.bar(
+    grouped,
+    x='Count',      # по оси X — число заявлений
+    y='Count',      # высота — то же число
+    text='Count',   # подписи внутри баров
+    color_discrete_sequence=[THEME['text']],
+    title="По направлениям"
+)
+fig_apps_dir.add_annotation(
+    x=0.5, y=1.05,                # по центру над графиком
+    xref='paper', yref='paper',
+    text=f"Всего заявлений: {total_dir}",
+    showarrow=False,
+    font=dict(color=THEME['text'], size=14)
+)
+# подписываем внутри и настраиваем hover
+fig_apps_dir.update_traces(
+    textposition='inside',
+    hovertemplate=(
+        'Заявлений, каждое направление по: %{x}<br>' +
+        'Направления:<br>%{customdata[0]}<extra></extra>'
+    ),
+    customdata=grouped[['HoverList']].values  # двумерный массив [[строка1],[строка2],...]
+)
+fig_apps_dir.update_layout(
+    xaxis_title="Количество заявлений",
+    yaxis_title="Количество заявлений",
+    paper_bgcolor=THEME['frame_bg'],
+    plot_bgcolor=THEME['frame_bg'],
+    margin=dict(l=20, r=20, t=60, b=20),
+    height=350,
+    showlegend=False
+)
+
+# 1.2 По формам обучения
+form_counts = apps['Форма обучения'].value_counts().reset_index()
+form_counts.columns = ['Форма обучения', 'Count']
+total_form = form_counts['Count'].sum()
+fig_apps_form = px.bar(
+    form_counts,
+    x='Форма обучения', y='Count',
+    title="По формам обучения",
+    text='Count',
+    color_discrete_sequence=[THEME['primary'],THEME['text']]
+)
+fig_apps_form.add_annotation(
+    x=0.5, y=1.05, xref='paper', yref='paper',
+    text=f"Всего заявлений: {total_form}",
+    showarrow=False,
+    font=dict(color=THEME['text'], size=14)
+)
+fig_apps_form.update_traces(textposition='inside')
+fig_apps_form.update_layout(
+    xaxis_title=None, yaxis_title="Заявлений",
+    paper_bgcolor=THEME['frame_bg'], plot_bgcolor=THEME['frame_bg'],
+    margin=dict(l=20,r=20,t=60,b=20), height=350
+)
+
+# 1.3 По бюджету/договору (суммируем колонки)
+fin_sums = pd.Series({
+    'Бюджет': apps['Бюджет'].sum(),
+    'Договор': apps['Договор'].sum()
+}).reset_index()
+fin_sums.columns = ['Основа финансирования', 'Count']
+total_fin  = fin_sums['Count'].sum() 
+fig_apps_fin = px.bar(
+    fin_sums,
+    x='Основа финансирования', y='Count',
+    title="По бюджет/договор",
+    text='Count',
+    color_discrete_sequence=[THEME['text'], THEME['primary']]
+)
+fig_apps_fin.add_annotation(
+    x=0.5, y=1.05, xref='paper', yref='paper',
+    text=f"Всего заявлений: {total_fin}",
+    showarrow=False,
+    font=dict(color=THEME['text'], size=14)
+)
+fig_apps_fin.update_traces(textposition='inside')
+fig_apps_fin.update_layout(
+    xaxis_title=None, yaxis_title="Заявлений",
+    paper_bgcolor=THEME['frame_bg'], plot_bgcolor=THEME['frame_bg'],
+    margin=dict(l=20,r=20,t=60,b=20), height=350
+)
 
 # === 1) построение tree_fig ===
 faculties = sorted(df['Fac_abbr'].dropna().unique())
@@ -101,6 +201,7 @@ tree_fig.update_layout(
     title='Структура контингента: КнАГУ → факультеты → кафедры',
     xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
     yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+    font=dict(color=THEME['primary']),
     plot_bgcolor=THEME['frame_bg'], paper_bgcolor=THEME['frame_bg'],
     margin=dict(l=20, r=20, t=50, b=20), height=400,
     annotations=annotations
@@ -224,8 +325,23 @@ app.layout = html.Div(
         html.H1('Admission Dashboard', style={'textAlign': 'center', 'color': THEME['primary'], 'fontSize': '48px', 'marginBottom': '5px'}),
         html.P('Контингент студентов за июнь 2025', style={'textAlign': 'center', 'color': THEME['text'], 'fontStyle': 'italic', 'fontSize': '20px', 'marginBottom': '20px'}),
         html.Div([html.A(name, href=url, target='_blank', className='pdf-link') for name, url in PDF_LINKS], style={'textAlign': 'center', 'marginBottom': '40px'}),
+        html.P("Количество заявлений:", style={'textAlign': 'center', 'color': THEME['primary'], 'fontSize': '25px', 'marginBottom': '5px'}),
         html.Div(
-            style={'display': 'grid', 'gridTemplateColumns': '1fr 1fr', 'gap': '20px', 'maxWidth': '1200px', 'margin': 'auto'},
+            style={
+                'display':'grid',
+                'gridTemplateColumns':'1fr 1fr 1fr',
+                'gap':'20px',
+                'maxWidth':'1200px',
+                'margin':'auto'
+            },
+            children=[
+                html.Div(dcc.Graph(figure=fig_apps_dir), className='graph-frame'),
+                html.Div(dcc.Graph(figure=fig_apps_form),className='graph-frame'),
+                html.Div(dcc.Graph(figure=fig_apps_fin), className='graph-frame'),
+            ]
+        ),
+        html.Div(
+            style={'display': 'grid', 'gridTemplateColumns': '1fr 1fr', 'gap': '20px', 'maxWidth': '1200px', 'margin': 'auto', 'marginTop': '30px'},
             children=[
                 html.Div(dcc.Graph(figure=tree_fig), className='graph-frame'),
                 html.Div(dcc.Graph(figure=bar_fig), className='graph-frame'),
