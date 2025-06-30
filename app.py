@@ -113,7 +113,7 @@ fin_sums = pd.Series({
     'Договор': apps['Договор'].sum()
 }).reset_index()
 fin_sums.columns = ['Основа финансирования', 'Count']
-total_fin  = fin_sums['Count'].sum() 
+total_fin  = fin_sums['Count'].sum()
 fig_apps_fin = px.bar(
     fin_sums,
     x='Основа финансирования', y='Count',
@@ -123,7 +123,7 @@ fig_apps_fin = px.bar(
 )
 fig_apps_fin.add_annotation(
     x=0.5, y=1.05, xref='paper', yref='paper',
-    text=f"Всего заявлений: {total_fin}",
+    text=f"Всего мест: {total_fin}",
     showarrow=False,
     font=dict(color=THEME['text'], size=14)
 )
@@ -218,7 +218,7 @@ bar_fig = px.bar(
     color='Dept_abbr',
     barmode='stack',
     text='Students',  # подписи внутри сегментов
-    color_discrete_sequence=[THEME['text'], THEME['border'], THEME['primary']]
+    color_discrete_sequence=[THEME['border'], THEME['primary']] #THEME['text'],
 )
 # выводим подписи сегментов внутри
 bar_fig.update_traces(
@@ -323,7 +323,7 @@ app.layout = html.Div(
     style={'padding': '20px', 'backgroundColor': THEME['background']},
     children=[
         html.H1('Admission Dashboard', style={'textAlign': 'center', 'color': THEME['primary'], 'fontSize': '48px', 'marginBottom': '5px'}),
-        html.P('Контингент студентов за июнь 2025', style={'textAlign': 'center', 'color': THEME['text'], 'fontStyle': 'italic', 'fontSize': '20px', 'marginBottom': '20px'}),
+        html.P('Результаты работы приемной комиссии за 2024 год', style={'textAlign': 'center', 'color': THEME['text'], 'fontStyle': 'italic', 'fontSize': '20px', 'marginBottom': '20px'}), #Контингент студентов за июнь 2025
         html.Div([html.A(name, href=url, target='_blank', className='pdf-link') for name, url in PDF_LINKS], style={'textAlign': 'center', 'marginBottom': '40px'}),
         html.P("Количество заявлений:", style={'textAlign': 'center', 'color': THEME['primary'], 'fontSize': '25px', 'marginBottom': '5px'}),
         html.Div(
