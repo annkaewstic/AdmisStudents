@@ -3,6 +3,7 @@ import plotly.graph_objects as go
 import plotly.express as px
 from urllib.parse import quote
 from dash import Dash, dcc, html
+import re
 
 # цветовая тема
 THEME = {
@@ -37,41 +38,47 @@ fac_full = df.dropna(subset=['Fac_abbr']).drop_duplicates('Fac_abbr').set_index(
 dept_full = df.dropna(subset=['Dept_abbr']).drop_duplicates('Dept_abbr').set_index('Dept_abbr')['Кафедра'].to_dict()
 
 # --- 1) три графика «заявлений» ---
-# 1.1 По направлениям — собираем списки
+# функция обрезки
+def truncate(name, length=40):
+    return name if len(name) <= length else name[:length-3] + '...'
+
+# 1.1 По направлениям — собираем списки с обрезкой
 dir_series = apps['Направление'].value_counts()
 dir_df = dir_series.reset_index()
 dir_df.columns = ['Направление', 'Count']
-total_dir  = dir_df['Count'].sum()
-# группируем по Count и склеиваем направления через <br>
+# создаём колонку с усечёнными названиями
+dir_df['Short'] = dir_df['Направление'].apply(truncate)
+# считаем общий итог
+total_dir = dir_df['Count'].sum()
+# группируем по Count и склеиваем короткие названия через <br>
 grouped = (
     dir_df
-    .groupby('Count')['Направление']
+    .groupby('Count')['Short']
     .agg(lambda names: '<br>'.join(names))
     .reset_index(name='HoverList')
 )
 fig_apps_dir = px.bar(
     grouped,
-    x='Count',      # по оси X — число заявлений
-    y='Count',      # высота — то же число
-    text='Count',   # подписи внутри баров
+    x='Count',
+    y='Count',
+    text='Count',
     color_discrete_sequence=[THEME['text']],
     title="По направлениям"
 )
 fig_apps_dir.add_annotation(
-    x=0.5, y=1.05,                # по центру над графиком
+    x=0.5, y=1.05,
     xref='paper', yref='paper',
     text=f"Всего заявлений: {total_dir}",
     showarrow=False,
     font=dict(color=THEME['text'], size=14)
 )
-# подписываем внутри и настраиваем hover
 fig_apps_dir.update_traces(
     textposition='inside',
     hovertemplate=(
-        'Заявлений, каждое направление по: %{x}<br>' +
+        'Заявлений: %{x}<br>' +
         'Направления:<br>%{customdata[0]}<extra></extra>'
     ),
-    customdata=grouped[['HoverList']].values  # двумерный массив [[строка1],[строка2],...]
+    customdata=grouped[['HoverList']].values
 )
 fig_apps_dir.update_layout(
     xaxis_title="Количество заявлений",
@@ -158,10 +165,15 @@ for source, target in [('КнАГУ', fac) for fac in faculties] + [(fac, dept) 
         showlegend=False
     ))
 
+# для удаления скобок и содержимого внутри:
+def strip_parens(s):
+    return re.sub(r'\s*\(.*?\)', '', s)
+
 nodes_rf = ['КнАГУ'] + faculties
 x_rf = [coords[n][0] for n in nodes_rf]
 y_rf = [coords[n][1] for n in nodes_rf]
-hover_rf = ['КнАГУ'] + [fac_full[f] for f in faculties]
+# hover: для КнАГУ просто «КнАГУ», для факультетов — full name без скобок
+hover_rf = ['КнАГУ'] + [strip_parens(fac_full[f]) for f in faculties]
 trace_rf = go.Scatter(
     x=x_rf, y=y_rf,
     mode='markers+text',
@@ -176,12 +188,14 @@ trace_rf = go.Scatter(
 dept_nodes = [d for fac in faculties for d in depts_by_fac[fac]]
 x_dn = [coords[d][0] for d in dept_nodes]
 y_dn = [coords[d][1] for d in dept_nodes]
+# hovertext для кафедр без скобок
+hover_dn = [strip_parens(dept_full[d]) for d in dept_nodes]
 trace_dn = go.Scatter(
     x=x_dn, y=y_dn,
     mode='markers',
     marker=dict(size=20, color=THEME['primary']),
     hoverinfo='text',
-    hovertext=[dept_full[d] for d in dept_nodes],
+    hovertext=hover_dn,
     showlegend=False
 )
 # поворот подписей кафедр
