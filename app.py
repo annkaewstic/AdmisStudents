@@ -105,13 +105,13 @@ for _, row in totals.iterrows():
 fig_apps_dir.add_annotation(
     x=0.5, y=1.12,
     xref='paper', yref='paper',
-    text=f"Всего возможных направлений: {total_dir}",
+    text=f"Всего направлений: {total_dir}",
     showarrow=False,
     font=dict(color=THEME['text'], size=14)
 )
 # оформление графика
 fig_apps_dir.update_layout(
-    title='Возможный набор на направления<br>(по факультетам и кафедрам)',
+    title='Набор на направления<br>(по факультетам и кафедрам)',
     xaxis_title='Факультеты',
     yaxis_title='Количество направлений',
     paper_bgcolor=THEME['frame_bg'],
@@ -179,7 +179,7 @@ fig_apps_fin.update_layout(
 )
 
 # === 1) построение tree_fig ===
-faculties = sorted(df['Fac_abbr'].dropna().unique())
+'''faculties = sorted(df['Fac_abbr'].dropna().unique())
 depts_by_fac = {fac: sorted(df[df['Fac_abbr']==fac]['Dept_abbr'].dropna().unique()) for fac in faculties}
 coords = {'КнАГУ': (0.5, 1.0)}
 n = len(faculties)
@@ -256,7 +256,7 @@ tree_fig.update_layout(
     plot_bgcolor=THEME['frame_bg'], paper_bgcolor=THEME['frame_bg'],
     margin=dict(l=20, r=20, t=50, b=20), height=400,
     annotations=annotations
-)
+)'''
 
 # === 2) упрощённая stacked bar ===
 bar_df = apps1.groupby(['Fac_abbr','Dept_abbr']).size().reset_index(name='Applicants')
@@ -388,22 +388,23 @@ app.layout = html.Div(
         html.Div(
             style={
                 'display':'grid',
-                'gridTemplateColumns':'1fr 1fr 1fr',
+                'gridTemplateColumns':'1fr 1fr',
                 'gap':'20px',
                 'maxWidth':'1200px',
                 'margin':'auto'
             },
             children=[
-                html.Div(dcc.Graph(figure=fig_apps_dir), className='graph-frame'),
+                #html.Div(dcc.Graph(figure=fig_apps_dir), className='graph-frame'),
                 html.Div(dcc.Graph(figure=fig_apps_form),className='graph-frame'),
                 html.Div(dcc.Graph(figure=fig_apps_fin), className='graph-frame'),
             ]
         ),
-        html.Div(
+                html.Div(
             style={'display': 'grid', 'gridTemplateColumns': '1fr 1fr', 'gap': '20px', 'maxWidth': '1200px', 'margin': 'auto', 'marginTop': '30px'},
             children=[
-                html.Div(dcc.Graph(figure=tree_fig), className='graph-frame'),
-                html.Div(dcc.Graph(figure=bar_fig), className='graph-frame'),
+                # вместо tree_fig теперь ваш первый график
+                html.Div(dcc.Graph(figure=fig_apps_dir), className='graph-frame'),
+                html.Div(dcc.Graph(figure=bar_fig),      className='graph-frame'),
             ]
         ),
         html.Div(
