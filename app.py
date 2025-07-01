@@ -114,14 +114,17 @@ fig_apps_dir.update_layout(
     title='Набор на направления<br>(по факультетам и кафедрам)',
     xaxis_title='Факультеты',
     yaxis_title='Количество направлений',
+    # вот это принудительно убирает любой поворот:
+    xaxis=dict(tickangle=0),
     paper_bgcolor=THEME['frame_bg'],
     plot_bgcolor=THEME['frame_bg'],
     font=dict(color=THEME['primary']),
     title_font=dict(color=THEME['primary']),
     showlegend=False,
-    margin=dict(l=20, r=20, t=120, b=20),
-    height=400
+    margin=dict(l=20, r=20, t=150, b=20),
+    height=600
 )
+
 
 # 1.2 По формам обучения
 form_counts = apps['Форма обучения'].value_counts().reset_index()
@@ -286,8 +289,8 @@ bar_fig.update_layout(
     font=dict(color=THEME['text']),
     title_font=dict(color=THEME['primary']),
     showlegend=False,
-    margin=dict(l=20, r=20, t=120, b=20),
-    height=400
+    margin=dict(l=20, r=20, t=150, b=20),
+    height=600
 )
 for _, row in totals.iterrows():
     bar_fig.add_annotation(
@@ -400,7 +403,7 @@ app.layout = html.Div(
             ]
         ),
                 html.Div(
-            style={'display': 'grid', 'gridTemplateColumns': '1fr 1fr', 'gap': '20px', 'maxWidth': '1200px', 'margin': 'auto', 'marginTop': '30px'},
+            style={'display': 'grid', 'gridTemplateColumns': '1fr 1fr', 'gap': '30px', 'maxWidth': '1200px', 'margin': 'auto', 'marginTop': '30px'},
             children=[
                 # вместо tree_fig теперь ваш первый график
                 html.Div(dcc.Graph(figure=fig_apps_dir), className='graph-frame'),
