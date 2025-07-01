@@ -387,7 +387,7 @@ app.layout = html.Div(
         html.H1('Работа приемной комиссии', style={'textAlign': 'center', 'color': THEME['primary'], 'fontSize': '48px', 'marginBottom': '5px'}),
         html.P('Результаты работы приемной комиссии за 2024 год', style={'textAlign': 'center', 'color': THEME['text'], 'fontStyle': 'italic', 'fontSize': '20px', 'marginBottom': '20px'}),
         html.Div([html.A(name, href=url, target='_blank', className='pdf-link') for name, url in PDF_LINKS], style={'textAlign': 'center', 'marginBottom': '40px'}),
-        html.P("Количество заявлений (предполагаемый набор по направлениям):", style={'textAlign': 'center', 'color': THEME['primary'], 'fontSize': '25px', 'marginBottom': '5px'}),
+        html.P("Количество заявлений (набор по направлениям):", style={'textAlign': 'center', 'color': THEME['primary'], 'fontSize': '25px', 'marginBottom': '5px'}),
         html.Div(
             style={
                 'display':'grid',
