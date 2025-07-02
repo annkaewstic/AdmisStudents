@@ -7,16 +7,15 @@ import re
 
 # цветовая тема
 THEME = {
-    'background': '#f2f2f2',
-    'primary': '#1f77b4',
-    'text': '#2ca02c',
-    'border': '#1f77b4',
-    'frame_bg': '#FFFFFF',
-    'link': '#4a4a4a'
+    'background': '#f2f2f2',    # фон всего дашборда
+    'primary': '#1f77b4',       # синий для заголовков
+    'text': '#2ca02c',          # зелёный для основного текста
+    'border': '#1f77b4',        # синий для рамок
+    'frame_bg': '#FFFFFF',      # фон панелей
+    'link': '#4a4a4a'           # тёмно‑серый для ссылок
 }
 
 BASE_RAW = "https://raw.githubusercontent.com/annkaewstic/AdmisStudents/release/"
-CSV_URL   = BASE_RAW + quote("Список студентов для расчета контингента на 06.2025.csv")
 APPL_URL  = BASE_RAW + quote("Итоги приемной комиссии за 2024 год.csv")
 
 PDF_FILES = [
