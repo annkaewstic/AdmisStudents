@@ -18,7 +18,6 @@ THEME = {
 BASE_RAW = "https://raw.githubusercontent.com/annkaewstic/AdmisStudents/release/"
 CSV_URL   = BASE_RAW + quote("Список студентов для расчета контингента на 06.2025.csv")
 APPL_URL  = BASE_RAW + quote("2024 год.csv")
-APPL_URL_1= BASE_RAW + quote("Итоги приема 2024.csv")
 
 PDF_FILES = [
     "Количество мест на обучение в 2024 году. Очная.pdf",
