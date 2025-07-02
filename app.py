@@ -27,14 +27,11 @@ PDF_FILES = [
 PDF_LINKS = [(name, BASE_RAW + quote(name)) for name in PDF_FILES]
 
 # --- загрузка и подготовка данных ---
-df   = pd.read_csv(CSV_URL, sep=';', encoding='cp1251')
 apps = pd.read_csv(APPL_URL, sep=',', encoding='utf-8')
 
 # извлекаем аббревиатуры
-df['Fac_abbr']  = df['Факультет'].str.extract(r'\((.*?)\)')
-df['Dept_abbr'] = df['Кафедра'].str.extract(r'\((.*?)\)')
 apps['Fac_abbr']  = apps['Факультет'].str.extract(r'\((.*?)\)')
-apps['Dept_abbr'] = apps['Кафедра'].str.extract(r'\((.*?)\)')  # исправлено опечатка
+apps['Dept_abbr'] = apps['Кафедра'].str.extract(r'\((.*?)\)') 
 
 # === 1.1 По формам обучения ===
 form_counts = apps['Форма обучения'].value_counts().reset_index()
